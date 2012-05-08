@@ -12,6 +12,12 @@ import java.io.FileOutputStream;
 import java.net.URL;
 import java.net.URLConnection;
 
+/**
+ * Copy a file from a network address to a local file. No error checking or argument validation is done.
+ * 
+ * @author vainolo
+ * 
+ */
 public class NetworkFileCopier {
 	public static File copyFileFromWeb(String address, String filePath) throws Exception {
 		byte[] buffer = new byte[1024];
