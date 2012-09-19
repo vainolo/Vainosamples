@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: GEF Template
+Bundle-SymbolicName: GEF_Template;singleton:=true
+Bundle-Version: 0.1
+Bundle-Vendor: Arieh "Vainolo" Bibliowicz
+Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Require-Bundle: org.eclipse.ui;bundle-version="3.7.0",
+ org.eclipse.core.runtime;bundle-version="3.7.0",
+ org.eclipse.gef;bundle-version="3.7.2"
