@@ -19,7 +19,7 @@ import java.util.zip.ZipFile;
  * 
  * @author vainolo
  */
-public class ZipExtracter {
+public class ZipExtractor {
 	public static void openZipFile(String zipFilename, String destinationDirname) throws IOException {
 		byte[] buffer = new byte[1024];
 		int bytesRead = 0;
