@@ -13,7 +13,7 @@ public class JavaHTTPAPIClient {
 				queryString("filter", "default").
 				queryString("site", "stackoverflow").
 				asJson();
-		System.out.println(response.getBody().getObject().toString(2));
+    System.out.println(response.getBody().getObject().toString(2));
 	}
 	
 	public static void main(String args[]) throws Exception {
