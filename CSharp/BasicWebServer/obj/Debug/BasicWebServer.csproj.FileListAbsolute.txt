@@ -1,6 +1,0 @@
-C:\Users\arib\Documents\GitHubVisualStudio\Vainosamples\CSharp\BasicWebServer\bin\Debug\BasicWebServer.exe.config
-C:\Users\arib\Documents\GitHubVisualStudio\Vainosamples\CSharp\BasicWebServer\bin\Debug\BasicWebServer.exe
-C:\Users\arib\Documents\GitHubVisualStudio\Vainosamples\CSharp\BasicWebServer\bin\Debug\BasicWebServer.pdb
-C:\Users\arib\Documents\GitHubVisualStudio\Vainosamples\CSharp\BasicWebServer\obj\Debug\BasicWebServer.csprojResolveAssemblyReference.cache
-C:\Users\arib\Documents\GitHubVisualStudio\Vainosamples\CSharp\BasicWebServer\obj\Debug\BasicWebServer.exe
-C:\Users\arib\Documents\GitHubVisualStudio\Vainosamples\CSharp\BasicWebServer\obj\Debug\BasicWebServer.pdb
