@@ -3,3 +3,5 @@
 # Package Files #
 *.war
 *.ear
+/CSharp/IWAAuthWebServer/bin/Debug
+/CSharp/IWAAuthWebServer/obj/Debug
