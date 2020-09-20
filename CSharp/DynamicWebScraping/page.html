@@ -1,0 +1,20 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>Sample</title>
+    <script>
+        function addMoreContent() {
+            var myDiv = document.getElementById("MyDiv");
+            var newElement = document.createElement("h2");
+            newElement.id = "heading2";
+            newElement.appendChild(document.createTextNode("World"));
+            document.getElementById("body").appendChild(newElement);
+        }
+    </script>
+</head>
+<body id="body">
+    <h1 id="heading1" onclick="addMoreContent()" style="cursor:pointer">Hello</h1>
+</body>
+</html>
