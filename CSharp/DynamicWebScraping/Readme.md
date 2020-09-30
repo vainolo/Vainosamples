@@ -1,6 +1,6 @@
 # Web Scraping
 
-Follow my tutorial [here](TBD) :-)
+Follow my tutorial [here](https://www.vainolo.com/2020/09/30/scraping-dynamic-web-pages-with-c-and-selenium/).
 
 ## Instructions to Run the Project
 
