@@ -3,12 +3,9 @@
 # Package Files #
 *.war
 *.ear
-/CSharp/IWAAuthWebServer/bin/Debug
-/CSharp/IWAAuthWebServer/obj/Debug
-/CSharp/DynamicWebScraping/obj
-/CSharp/DynamicWebScraping/bin
-/CSharp/DynamicWebScraping/.vs
-/CSharp/WebScraping/bin
-/CSharp/WebScraping/obj
-/CSharp/WebScraping/.vscode
-/CSharp/WebScraping/.vs
+./vs
+**/.vs
+**/obj
+**/bin
+**/.vscode
+/CSharp/AspDotNetCoreBackgroundService/Properties/launchSettings.json
