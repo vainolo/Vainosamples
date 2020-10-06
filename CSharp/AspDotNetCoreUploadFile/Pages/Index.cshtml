@@ -1,0 +1,20 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Upload File";
+}
+
+<div class="text-center">
+    <h1>Upload File</h1>
+</div>
+
+<form method="post" enctype="multipart/form-data">
+    <input type="file" name="uploadedFile" />
+    <button type="submit" style="">Upload</button>
+</form>
+
+@if (Model.UploadedImage != null)
+{
+    <p>Original Upload</p>
+    <p><img src="@Model.UploadedImage" alt="Uploaded Image" width="400" height="400" /></p>
+}
