@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -12,6 +13,9 @@ namespace AspDotNetCoreUploadFile.Pages
         private readonly ILogger<IndexModel> _logger;
         private readonly IHostEnvironment _environment;
 
+        [BindProperty]
+        public IFormFile UploadedFile { get; set; }
+
         public IndexModel(ILogger<IndexModel> logger, IHostEnvironment environment)
         {
             _logger = logger;
@@ -22,19 +26,19 @@ namespace AspDotNetCoreUploadFile.Pages
         {
         }
 
-        public async Task OnPostAsync(IFormFile uploadedFile)
+        public async Task OnPostAsync()
         {
-            if (uploadedFile == null || uploadedFile.Length == 0)
+            if (UploadedFile == null || UploadedFile.Length == 0)
             {
                 return;
             }
 
-            _logger.LogInformation($"Uploading {uploadedFile.FileName}.");
-            string targetFileName = $"{_environment.ContentRootPath}/{uploadedFile.FileName}";
+            _logger.LogInformation($"Uploading {UploadedFile.FileName}.");
+            string targetFileName = $"{_environment.ContentRootPath}/{UploadedFile.FileName}";
 
             using (var stream = new FileStream(targetFileName, FileMode.Create))
             {
-                await uploadedFile.CopyToAsync(stream);
+                await UploadedFile.CopyToAsync(stream);
             }
         }
     }
