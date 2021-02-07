@@ -8,8 +8,8 @@ using Microsoft.ML.Vision;
 
 public class Program
 {
-    static readonly string inputDataDirectoryPath = Environment.CurrentDirectory + Path.DirectorySeparatorChar + "pieces";
-    static readonly string outputModelFilePath = Environment.CurrentDirectory + Path.DirectorySeparatorChar + "model.zip";
+    static readonly string inputDataDirectoryPath = Path.Combine(Environment.CurrentDirectory, "..", "pieces");
+    static readonly string outputModelFilePath = Path.Combine(Environment.CurrentDirectory, "model.zip");
     static MLContext mlContext = new MLContext(seed: 1);
     static ITransformer mlModel;
 
