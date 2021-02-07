@@ -26,8 +26,7 @@ public class Program
 
     static void TrainModel(ImageClassificationTrainer.Architecture architecture)
     {
-        var temp = Console.Out;
-        Console.SetOut(new StreamWriter(Stream.Null));
+        // To suppress errors from the TensorFlow library, set $env:TF_CPP_MIN_LOG_LEVEL = 2
 
         // Create the input dataset
         var inputs = new List<ModelInput>();
@@ -54,8 +53,6 @@ public class Program
         IEstimator<ITransformer> trainingPipeline = dataProcessPipeline.Append(trainer);
         // Create the model
         mlModel = trainingPipeline.Fit(trainingDataView);
-        Console.SetOut(temp);
-
         Evaluate(mlContext, trainingDataView, trainingPipeline);
     }
 
