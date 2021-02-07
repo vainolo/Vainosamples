@@ -67,13 +67,8 @@ public class Program
 
     static void Evaluate(MLContext mlContext, IDataView trainingDataView, IEstimator<ITransformer> trainingPipeline)
     {
-        // Cross-Validate with single dataset (since we don't have two datasets, one for training and for evaluate)
-        // in order to evaluate and get the model's accuracy metrics
         Console.WriteLine("=============== Cross-validating to get model's accuracy metrics ===============");
-        var temp = Console.Out;
-        Console.SetOut(new StreamWriter(Stream.Null));
         var crossValidationResults = mlContext.MulticlassClassification.CrossValidate(trainingDataView, trainingPipeline, numberOfFolds: 5, labelColumnName: "Label");
-        Console.SetOut(temp);
         PrintMulticlassClassificationFoldsAverageMetrics(crossValidationResults);
     }
 
