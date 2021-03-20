@@ -9,7 +9,6 @@ using Microsoft.ML.Vision;
 public class Program
 {
     static readonly string inputDataDirectoryPath = Path.Combine(Environment.CurrentDirectory, "..", "pieces");
-    static readonly string outputModelFilePath = Path.Combine(Environment.CurrentDirectory, "model.zip");
     static MLContext mlContext = new MLContext(seed: 1);
     private static TextWriter outBack;
     private static TextWriter errBack;
@@ -61,7 +60,7 @@ public class Program
         return predEngine.Predict(input);
     }
 
-    static Dictionary<string, (double Avg, double StdDev)> CalculateAndPrintAverageMetrics(IEnumerable<TrainCatalogBase.CrossValidationResult<MulticlassClassificationMetrics>> crossValResults)
+    static void CalculateAndPrintAverageMetrics(IEnumerable<TrainCatalogBase.CrossValidationResult<MulticlassClassificationMetrics>> crossValResults)
     {
         var metricsInMultipleFolds = crossValResults.Select(r => r.Metrics);
 
@@ -76,14 +75,11 @@ public class Program
         Console.WriteLine($"Avg. MacroAccuracy (Std. Dev):    {retVal["MacroAccuracy"].Avg:0.###} ({retVal["MacroAccuracy"].StdDev:#.###})");
         Console.WriteLine($"Avg. LogLoss (Std. Dev):          {retVal["LogLoss"].Avg:#.###} ({retVal["LogLoss"].StdDev:#.###})");
         Console.WriteLine($"Avg. LogLossReduction (Std. Dev): {retVal["LogLossReduction"].Avg:#.###} ({retVal["LogLossReduction"].StdDev:#.###})");
-
-        return retVal;
     }
 
     static (double, double) CalculateAverageMetrics(IEnumerable<double> metricValues)
     {
-        return (metricValues.Average(),
-                CalculateStandardDeviation(metricValues));
+        return (metricValues.Average(), CalculateStandardDeviation(metricValues));
     }
 
     static double CalculateStandardDeviation(IEnumerable<double> values)
@@ -123,23 +119,11 @@ public class Program
                 StopAllOutput();
                 results[(arch, epoch)] = TrainModel(arch, epoch);
                 RestoreAllOutput();
-                TestClassifier(results[(arch, epoch)].model);
-            }
-        }
-
-        foreach (var arch in architectures)
-        {
-            foreach (var epoch in epochs)
-            {
-                Console.WriteLine($"Using architecture {arch}, epochs {epoch}.");
                 CalculateAndPrintAverageMetrics(results[(arch, epoch)].metrics);
                 TestClassifier(results[(arch, epoch)].model);
-
-
             }
         }
     }
-
     static void StopAllOutput()
     {
         outBack = Console.Out;
