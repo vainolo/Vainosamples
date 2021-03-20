@@ -11,7 +11,8 @@ public class Program
     static readonly string inputDataDirectoryPath = Path.Combine(Environment.CurrentDirectory, "..", "pieces");
     static readonly string outputModelFilePath = Path.Combine(Environment.CurrentDirectory, "model.zip");
     static MLContext mlContext = new MLContext(seed: 1);
-    static ITransformer mlModel;
+    private static TextWriter outBack;
+    private static TextWriter errBack;
 
     public class ModelInput
     {
@@ -24,11 +25,9 @@ public class Program
         public String PredictedLabel { get; set; }
     }
 
-    static void TrainModel(ImageClassificationTrainer.Architecture architecture)
+    static (ITransformer mlModel, IReadOnlyList<TrainCatalogBase.CrossValidationResult<MulticlassClassificationMetrics>> evaluation) TrainModel(ImageClassificationTrainer.Architecture architecture, int epoch)
     {
         // To suppress errors from the TensorFlow library, set $env:TF_CPP_MIN_LOG_LEVEL = 2
-
-        // Create the input dataset
         var inputs = new List<ModelInput>();
         foreach (var subDir in Directory.GetDirectories(inputDataDirectoryPath))
         {
@@ -38,7 +37,6 @@ public class Program
             }
         }
         var trainingDataView = mlContext.Data.LoadFromEnumerable<ModelInput>(inputs);
-        // Create training pipeline
         var dataProcessPipeline = mlContext.Transforms.Conversion.MapValueToKey("Label", "Label")
                                     .Append(mlContext.Transforms.LoadRawImageBytes("ImageSource_featurized", null, "ImageSource"))
                                     .Append(mlContext.Transforms.CopyColumns("Features", "ImageSource_featurized"));
@@ -46,64 +44,46 @@ public class Program
                                         new ImageClassificationTrainer.Options() 
                                             {
                                                 Arch = architecture,
-                                                LabelColumnName = "Label", 
+                                                Epoch = epoch,
                                                 FeatureColumnName = "Features",
+                                                LabelColumnName = "Label", 
                                             })
                                     .Append(mlContext.Transforms.Conversion.MapKeyToValue("PredictedLabel", "PredictedLabel"));
         IEstimator<ITransformer> trainingPipeline = dataProcessPipeline.Append(trainer);
-        // Create the model
-        mlModel = trainingPipeline.Fit(trainingDataView);
-        Evaluate(mlContext, trainingDataView, trainingPipeline);
+        var mlModel = trainingPipeline.Fit(trainingDataView);
+        var evaluation = mlContext.MulticlassClassification.CrossValidate(trainingDataView, trainingPipeline, numberOfFolds: 5, labelColumnName: "Label");
+        return (mlModel, evaluation);
     }
 
-    static ModelOutput Classify(string filePath)
+    static ModelOutput Classify(PredictionEngine<ModelInput, ModelOutput> predEngine, string filePath)
     {
-        // Create input to classify
         ModelInput input = new ModelInput() { ImageSource = filePath };
-        // Load model and predict
-        var predEngine = mlContext.Model.CreatePredictionEngine<ModelInput, ModelOutput>(mlModel);
         return predEngine.Predict(input);
     }
 
-    static void Evaluate(MLContext mlContext, IDataView trainingDataView, IEstimator<ITransformer> trainingPipeline)
-    {
-        Console.WriteLine("=============== Cross-validating to get model's accuracy metrics ===============");
-        var crossValidationResults = mlContext.MulticlassClassification.CrossValidate(trainingDataView, trainingPipeline, numberOfFolds: 5, labelColumnName: "Label");
-        PrintMulticlassClassificationFoldsAverageMetrics(crossValidationResults);
-    }
-
-    static void PrintMulticlassClassificationFoldsAverageMetrics(IEnumerable<TrainCatalogBase.CrossValidationResult<MulticlassClassificationMetrics>> crossValResults)
+    static Dictionary<string, (double Avg, double StdDev)> CalculateAndPrintAverageMetrics(IEnumerable<TrainCatalogBase.CrossValidationResult<MulticlassClassificationMetrics>> crossValResults)
     {
         var metricsInMultipleFolds = crossValResults.Select(r => r.Metrics);
 
-        var microAccuracyValues = metricsInMultipleFolds.Select(m => m.MicroAccuracy);
-        var microAccuracyAverage = microAccuracyValues.Average();
-        var microAccuraciesStdDeviation = CalculateStandardDeviation(microAccuracyValues);
-        var microAccuraciesConfidenceInterval95 = CalculateConfidenceInterval95(microAccuracyValues);
+        var retVal = new Dictionary<string, (double Avg, double StdDev)>();
 
-        var macroAccuracyValues = metricsInMultipleFolds.Select(m => m.MacroAccuracy);
-        var macroAccuracyAverage = macroAccuracyValues.Average();
-        var macroAccuraciesStdDeviation = CalculateStandardDeviation(macroAccuracyValues);
-        var macroAccuraciesConfidenceInterval95 = CalculateConfidenceInterval95(macroAccuracyValues);
+        retVal["MicroAccuracy"] = CalculateAverageMetrics(metricsInMultipleFolds.Select(m => m.MicroAccuracy));
+        retVal["MacroAccuracy"] = CalculateAverageMetrics(metricsInMultipleFolds.Select(m => m.MacroAccuracy));
+        retVal["LogLoss"] = CalculateAverageMetrics(metricsInMultipleFolds.Select(m => m.LogLoss));
+        retVal["LogLossReduction"] = CalculateAverageMetrics(metricsInMultipleFolds.Select(m => m.LogLossReduction));
 
-        var logLossValues = metricsInMultipleFolds.Select(m => m.LogLoss);
-        var logLossAverage = logLossValues.Average();
-        var logLossStdDeviation = CalculateStandardDeviation(logLossValues);
-        var logLossConfidenceInterval95 = CalculateConfidenceInterval95(logLossValues);
+        Console.WriteLine($"Avg. MicroAccuracy (Std. Dev):    {retVal["MicroAccuracy"].Avg:0.###} ({retVal["MicroAccuracy"].StdDev:#.###})");
+        Console.WriteLine($"Avg. MacroAccuracy (Std. Dev):    {retVal["MacroAccuracy"].Avg:0.###} ({retVal["MacroAccuracy"].StdDev:#.###})");
+        Console.WriteLine($"Avg. LogLoss (Std. Dev):          {retVal["LogLoss"].Avg:#.###} ({retVal["LogLoss"].StdDev:#.###})");
+        Console.WriteLine($"Avg. LogLossReduction (Std. Dev): {retVal["LogLossReduction"].Avg:#.###} ({retVal["LogLossReduction"].StdDev:#.###})");
 
-        var logLossReductionValues = metricsInMultipleFolds.Select(m => m.LogLossReduction);
-        var logLossReductionAverage = logLossReductionValues.Average();
-        var logLossReductionStdDeviation = CalculateStandardDeviation(logLossReductionValues);
-        var logLossReductionConfidenceInterval95 = CalculateConfidenceInterval95(logLossReductionValues);
+        return retVal;
+    }
 
-        Console.WriteLine($"*************************************************************************************************************");
-        Console.WriteLine($"*       Metrics for Multi-class Classification model      ");
-        Console.WriteLine($"*------------------------------------------------------------------------------------------------------------");
-        Console.WriteLine($"*       Average MicroAccuracy:    {microAccuracyAverage:0.###}  - Standard deviation: ({microAccuraciesStdDeviation:#.###})  - Confidence Interval 95%: ({microAccuraciesConfidenceInterval95:#.###})");
-        Console.WriteLine($"*       Average MacroAccuracy:    {macroAccuracyAverage:0.###}  - Standard deviation: ({macroAccuraciesStdDeviation:#.###})  - Confidence Interval 95%: ({macroAccuraciesConfidenceInterval95:#.###})");
-        Console.WriteLine($"*       Average LogLoss:          {logLossAverage:#.###}  - Standard deviation: ({logLossStdDeviation:#.###})  - Confidence Interval 95%: ({logLossConfidenceInterval95:#.###})");
-        Console.WriteLine($"*       Average LogLossReduction: {logLossReductionAverage:#.###}  - Standard deviation: ({logLossReductionStdDeviation:#.###})  - Confidence Interval 95%: ({logLossReductionConfidenceInterval95:#.###})");
-        Console.WriteLine($"*************************************************************************************************************");
+    static (double, double) CalculateAverageMetrics(IEnumerable<double> metricValues)
+    {
+        return (metricValues.Average(),
+                CalculateStandardDeviation(metricValues));
     }
 
     static double CalculateStandardDeviation(IEnumerable<double> values)
@@ -114,45 +94,64 @@ public class Program
         return standardDeviation;
     }
 
-    static double CalculateConfidenceInterval95(IEnumerable<double> values)
+    static void TestClassifier(ITransformer model)
     {
-        double confidenceInterval95 = 1.96 * CalculateStandardDeviation(values) / Math.Sqrt((values.Count() - 1));
-        return confidenceInterval95;
-    }
+        var predEngine = mlContext.Model.CreatePredictionEngine<ModelInput, ModelOutput>(model);
 
-    static void TestClassifier()
-    {
-        var result = Classify(Path.Combine(Environment.CurrentDirectory, "Black.jpg"));
+        var result = Classify(predEngine, Path.Combine(Environment.CurrentDirectory, "Black.jpg"));
         Console.WriteLine($"Testing with black piece. Prediction: {result.PredictedLabel}.");
-        result = Classify(Path.Combine(Environment.CurrentDirectory, "Blue.jpg"));
+        result = Classify(predEngine, Path.Combine(Environment.CurrentDirectory, "Blue.jpg"));
         Console.WriteLine($"Testing with blue piece. Prediction: {result.PredictedLabel}.");
-        result = Classify(Path.Combine(Environment.CurrentDirectory, "Green.jpg"));
+        result = Classify(predEngine, Path.Combine(Environment.CurrentDirectory, "Green.jpg"));
         Console.WriteLine($"Testing with green piece. Prediction: {result.PredictedLabel}.");
-        result = Classify(Path.Combine(Environment.CurrentDirectory,  "Yellow.jpg"));
+        result = Classify(predEngine, Path.Combine(Environment.CurrentDirectory,  "Yellow.jpg"));
         Console.WriteLine($"Testing with yellow piece. Prediction: {result.PredictedLabel}.");
     }
 
     static void Main()
     {
-        var architecture = ImageClassificationTrainer.Architecture.InceptionV3;
-        Console.WriteLine($"Using algorithm {architecture}");
-        TrainModel(architecture);
-        TestClassifier();
+        var architectures = new []{ ImageClassificationTrainer.Architecture.InceptionV3, ImageClassificationTrainer.Architecture.MobilenetV2, ImageClassificationTrainer.Architecture.ResnetV2101, ImageClassificationTrainer.Architecture.ResnetV250 };
+        var epochs = new[] { 50, 100, 200, 400 };
 
-        architecture = ImageClassificationTrainer.Architecture.MobilenetV2;
-        Console.WriteLine($"Using algorithm {architecture}");
-        TrainModel(architecture);
-        TestClassifier();
+        var results = new Dictionary<(ImageClassificationTrainer.Architecture arch, int epoch), (ITransformer model, IReadOnlyList<TrainCatalogBase.CrossValidationResult<MulticlassClassificationMetrics>> metrics)>();
 
-        architecture = ImageClassificationTrainer.Architecture.ResnetV2101;
-        Console.WriteLine($"Using algorithm {architecture}");
-        TrainModel(architecture);
-        TestClassifier();
+        foreach(var arch in architectures)
+        {
+            foreach(var epoch in epochs)
+            {
+                Console.WriteLine($"Using architecture {arch}, epochs {epoch}.");
+                StopAllOutput();
+                results[(arch, epoch)] = TrainModel(arch, epoch);
+                RestoreAllOutput();
+                TestClassifier(results[(arch, epoch)].model);
+            }
+        }
 
-        architecture = ImageClassificationTrainer.Architecture.ResnetV250;
-        Console.WriteLine($"Using algorithm {architecture}");
-        TrainModel(architecture);
-        TestClassifier();
+        foreach (var arch in architectures)
+        {
+            foreach (var epoch in epochs)
+            {
+                Console.WriteLine($"Using architecture {arch}, epochs {epoch}.");
+                CalculateAndPrintAverageMetrics(results[(arch, epoch)].metrics);
+                TestClassifier(results[(arch, epoch)].model);
+
+
+            }
+        }
+    }
+
+    static void StopAllOutput()
+    {
+        outBack = Console.Out;
+        Console.SetOut(TextWriter.Null);
+        errBack = Console.Error;
+        Console.SetError(TextWriter.Null);
+    }
+
+    static void RestoreAllOutput()
+    {
+        Console.SetOut(outBack);
+        Console.SetError(errBack);
     }
 }
 
