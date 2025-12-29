@@ -1,4 +1,4 @@
-﻿Random r = new Random();
+﻿Random r = Random.Shared;
 var ctxProvider = new ContextProvider<Context>();
 
 async Task InitializeAndPrintContextAsync(int id)
@@ -29,14 +29,16 @@ async Task Level2(int id)
     Console.WriteLine($"Level2 - Current context for id: {id} - {ctx.id}, name {ctx.name}.");
 }
 
-InitializeAndPrintContextAsync(1);
-InitializeAndPrintContextAsync(2);
-InitializeAndPrintContextAsync(3);
+var task1 = InitializeAndPrintContextAsync(1);
+var task2 = InitializeAndPrintContextAsync(2);
+var task3 = InitializeAndPrintContextAsync(3);
 
 Console.Read();
 
+await Task.WhenAll(task1, task2, task3);
+
 public class Context
 {
-    public Guid id {get; set;}
-    public string name {get; set;}
+    public Guid id { get; set; }
+    public string name { get; set; }
 }
